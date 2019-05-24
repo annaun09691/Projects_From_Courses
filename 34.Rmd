@@ -1,0 +1,158 @@
+---
+title: "Social Network Analysis of London Street Gangs"
+author: "SUN AN YU"
+date: "2019-1-22"
+output:
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+  html_document:
+    fig_caption: yes
+    highlight: tango
+    number_sections: no
+    theme: united
+    toc: yes
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Abstract 
+This study first display the network structure of a street gang, and focus on behavioral machanisms regarding instagation in delinquent groups
+
+<!-- The best possible flow (Main contents also follow the almost same structure.): https://cbs.umn.edu/sites/cbs.umn.edu/files/public/downloads/Annotated_Nature_abstract.pdf --> 
+
+## Background
+Delinquency group network and character has been recognized for decades. Focusing on connectness, Brendan Lantz used burglary offending data to examine how offender ties impact individual behavior. Findings are that co-offender groups vary in their connectedness, that these connections significantly affect the likelihood of offending (2015). 
+
+To further examine internal structure, it is crutial to keep in mind that the members play different roles in the network. Two distinct type of delinquent group members are $instigators$ and $joiners$ (Warr, 1996). An instigating offender is typically conceptualized as a high rate offender who offends with several street gang members from different groups. Other less influential offenders are labeled $joiners$. 
+
+## Research Question 
+In terms of crime prevention, we want to identify the most influential members (or $instigators$) in a delinquent group. Can the social network metrics of street gangsters explain their individual behavior as $instigators$? And what possible attributes take part in the making of $instigators$?
+
+
+## Dataset 
+###London street gang (2005-2009)
+A weighted network representing strengths of relationships 
+among confirmed members of a London street gang, 2005-2009. 
+The 54 Nodes are gang members, and the edge weight gives the level 
+of relationship (1: hang out together; 2: co-offend together; 
+3: co-offend together, serious crime; 
+4: co-offend together, serous crime, kin(relatives)). 
+Vertice attributes include number of convictions and arrest.
+
+
+## Network Figure 
+
+```{r, fig.cap = "Fig.1. London Street Gang Network.", out.width = '80%'}
+library(igraph)
+#reading the "London gangster" adjacency matrix
+dat=read.csv('LONDON_GANG.csv',header=TRUE,
+             row.names=1,check.names=FALSE)
+m=as.matrix(dat)
+net=graph.adjacency(m,mode="undirected",weighted=TRUE)
+
+#adding attributes to the vertices
+attri = read.csv('LONDON_GANG_ATTR.csv',
+                 header=TRUE,row.names=1,
+                 check.names=FALSE)
+
+V(net)$arrests = data.frame(attri$Arrests)
+V(net)$convictions = data.frame(attri$Convictions)
+V(net)$age = data.frame(attri$Age)
+
+
+# reduce margins
+par(mar = rep(0.8, 4))
+#node size by degree centrality, edge width and color by weight.
+colrs <- c("grey91", "gold", "orange", "tomato")
+E(net)$color <- colrs[(E(net)$weight)]
+
+plot.igraph(net, 
+     edge.width=E(net)$weight,
+     vertex.size= degree(net)*0.6,
+     vertex.label.color="black",
+     main="London Street Gang Network ",
+     vertex.color='grey70',
+     layout=layout_with_graphopt,
+     vertex.frame.color="#ffffff"
+)
+```
+
+## Method
+###Clustering Coefficient
+The clustering coefficient of an undirected graph is a measure of the number of triangles in a graph.
+
+The clustering coefficient of a graph is based on a local clustering coefficient for each node 
+
+number of triangles connected to node ${i}$
+$$C_{i}=\frac{number\ of\ triangles\ connected\ to\ node\ i}{number\ of\ triples\ centered\ around\ node\ i}$$
+The measure is 1 if every neighbour connected to ${v_{i}}$ is also connected to every other vertex within the neighbourhood, and 0 if no vertex that is connected to ${v_{i}}$ connects to any other vertex that is connected to ${v_{i}}$.
+
+###Eigenvector Centrality
+In graph theory, eigenvector centrality is a measure of the influence of a node in a network. Relative scores are assigned to all nodes in the network based on the concept that connections to high-scoring nodes contribute more to the score of the node in question than equal connections to low-scoring nodes. 
+A high eigenvector score means that a node is connected to many nodes who themselves have high scores.
+
+For a given graph ${G:=(V,E)}$ with ${|V|}$ vertices let ${A=(a_{v,t})}$ be the adjacency matrix, i.e. ${A=(a_{v,t})=1}$ if vertex ${v}$is linked to vertex ${t}$, and ${A=(a_{v,t})=0}$ otherwise. 
+
+The relative centrality score of vertex ${v}$ can be defined as:
+
+$${x_{v}={\frac {1}{\lambda }}\sum _{t\in M(v)}x_{t}={\frac {1}{\lambda }}\sum _{t\in G}a_{v,t}x_{t}}$$
+where ${M(v)}$ is a set of the neighbors of ${v} $ and ${\lambda}$ is a constant.
+
+## Results
+
+```{r, echo=FALSE, fig.cap="Fig.2. Degree vs. Clusering Coefficient", out.width = '60%'}
+
+#Clustering Coefficient
+CC <- transitivity(net, type="local",isolates="zero")
+#Eigenvector Centrality
+evc = evcent(net)$vector
+plot(evc,CC,
+     col="lightblue", pch=19, cex=3,
+     xlab="Eigenvector Centrality", 
+     ylab="Clusering Coefficient",
+     main = "Eigenvector Centrality vs. Clusering Coefficient")
+text(evc,CC,labels=V(net)$name, cex=0.9)
+
+
+
+```
+
+
+```{r, echo=FALSE, fig.cap = "Fig.3. Attributes vs. Eigenvector Centrality", out.width = '60%'}
+
+par(mfrow=c(1,3))
+plot(attri$Age ~ evc, xlab='Eigenvector Centrality',
+     ylab='Log(Age)',
+     main='Age')
+plot(attri$Convictions ~ evc, xlab='Eigenvector Centrality',
+     ylab='Log(Conviction)',
+     main='Conviction')
+plot(attri$Arrests ~ evc, xlab='Eigenvector Centrality',
+     ylab='Log(Arrests)',
+     main='Arrests')
+```
+## Discussion 
+
+Here I use Clustering Coefficient and Eigenvector Centrality to describe the characteristic of $instigators$ and $joiners$. 
+
+
+1. Observing Clustering Coefficient, from which I assume that street gang members with lower EVC degrees ($joiners$) tend to cluster and stay within their own ethnic groups. While members with higher EVC degree ($instigators$) have less consistent partnerships (low CC), and rotates across different groups, suggesting that they might have developed more sophisticated relation with greater scale that allows them to operate with organizational efficiency.
+
+
+Hypothesis on characteristic of the $instigators$ are:
+Instigators commit more offenses, spend more time in prison, start their convicting crime at a younger age, and partner with a greater number of co-offenders.
+
+
+2. While there are no significant patterns in attributes $Age$ and $Convitions$ due to insufficient data. There is a chance that prisons ($Arrests$) could serve as channels that allow these members to network and gain influence at the mean time.
+
+## References
+
+1. T. Grund, and J. Densley, "Ethnic homophily and triad closure: Mapping internal gang structure using exponential random graph models." Journal of Contemporary Criminal Justice 31(3), 354-370 (2015)
+
+2. Brendan Lantz, "Co-Offender Ties and the Criminal Career: The Relationship between Co-Offender Group Structure and the Individual Offender"(2015)
